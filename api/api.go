@@ -16,6 +16,8 @@ func GenerateChain(w http.ResponseWriter, r *http.Request, p httprouter.Params) 
 	// (trim) 画像をすべて指定位置でトリミングしてファイル出力。戻り値は生成されたファイル名配列
 	// (flip) 画像をすべて左右反転してファイル出力。戻り値は生成されたファイル名配列
 	// (paste) 画像をすべてタイル状に貼り付けてファイル出力。戻り値は生成されたファイル名配列
+	// (archive) 一連の処理で生成された成果物を圧縮
+	// 圧縮ファイルを返却
 }
 
 func Save(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
