@@ -4,6 +4,8 @@ github.com/davecgh/go-spew/spew
 github.com/inconshreveable/mousetrap
 # github.com/julienschmidt/httprouter v1.2.0
 github.com/julienschmidt/httprouter
+# github.com/oliamb/cutter v0.2.2
+github.com/oliamb/cutter
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/spf13/cobra v0.0.3
