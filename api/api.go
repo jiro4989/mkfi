@@ -46,23 +46,33 @@ func GenerateChain(w http.ResponseWriter, r *http.Request, p httprouter.Params) 
 
 // Save はアップロードされた複数の画像ファイルをディレクトリ配下に保存する
 func Save(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	_, err := save(w, r, p)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// もとのページにリダイレクト
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func save(w http.ResponseWriter, r *http.Request, p httprouter.Params) ([]string, error) {
 	defer r.Body.Close()
 
 	// multipartリーダーの取得
 	mr, err := r.MultipartReader()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	// 保存ファイルの格納先ディレクトリの作成
 	subDirName := "save"
 	saveDir := outDir + "/" + subDirName
 	if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
+	var ret []string
 	for {
 		part, err := mr.NextPart()
 		if err == io.EOF {
@@ -75,26 +85,31 @@ func Save(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		}
 
 		// defer closeするために無名関数呼び出し
-		func() {
+		fn, err := func() (string, error) {
 			// 保存ファイルの生成
-			saveFile, err := os.Create(saveDir + "/" + part.FileName())
+			saveFilePath := saveDir + "/" + part.FileName()
+			saveFile, err := os.Create(saveFilePath)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+				return "", err
 			}
 			defer saveFile.Close()
 
 			// ファイルの内容を保存ファイルに書き込み
 			_, err = io.Copy(saveFile, part)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+				return "", err
 			}
+
+			return saveFilePath, nil
 		}()
+		if err != nil {
+			return nil, err
+		}
+
+		ret = append(ret, fn)
 	}
 
-	// もとのページにリダイレクト
-	http.Redirect(w, r, "/", http.StatusFound)
+	return ret, nil
 }
 
 func Generate(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
