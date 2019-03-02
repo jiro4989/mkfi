@@ -3,12 +3,36 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/julienschmidt/httprouter"
 )
 
+const outDir = "out"
+
+func RootPage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	defer r.Body.Close()
+	fmt.Fprintf(w, "%s", `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+</head>
+<body>
+    <form method="post" action="/save" enctype="multipart/form-data">
+        <fieldset>
+            <input type="file" name="upload_files" id="upload_files" multiple="multiple">
+            <input type="submit" name="submit" value="アップロード開始">
+        </fieldset>
+    </form>
+</body>
+</html>
+	`)
+}
 func GenerateChain(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer r.Body.Close()
 	// (save) 一旦処理対象の画像ファイルをすべてローカルに保存
@@ -20,9 +44,57 @@ func GenerateChain(w http.ResponseWriter, r *http.Request, p httprouter.Params) 
 	// 圧縮ファイルを返却
 }
 
+// Save はアップロードされた複数の画像ファイルをディレクトリ配下に保存する
 func Save(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer r.Body.Close()
-	// TODO
+
+	// multipartリーダーの取得
+	mr, err := r.MultipartReader()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// 保存ファイルの格納先ディレクトリの作成
+	subDirName := "save"
+	saveDir := outDir + "/" + subDirName
+	if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+
+		// ファイル名がない場合はスキップ
+		if part.FileName() == "" {
+			continue
+		}
+
+		// defer closeするために無名関数呼び出し
+		func() {
+			// 保存ファイルの生成
+			saveFile, err := os.Create(saveDir + "/" + part.FileName())
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer saveFile.Close()
+
+			// ファイルの内容を保存ファイルに書き込み
+			_, err = io.Copy(saveFile, part)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}()
+	}
+
+	// もとのページにリダイレクト
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func Generate(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

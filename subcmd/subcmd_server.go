@@ -17,7 +17,9 @@ var serverCommand = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		router := httprouter.New() // HTTPルーターを初期化
 
+		router.GET("/", api.RootPage)
 		router.POST("/generate-chain", api.GenerateChain)
+		router.POST("/save", api.Save)
 		router.POST("/generate", api.Generate)
 		router.POST("/trim", api.Trim)
 		router.POST("/flip", api.Flip)
@@ -26,7 +28,7 @@ var serverCommand = &cobra.Command{
 		const port = "8080"
 
 		// Webサーバーを8080ポートで立ち上げる
-		fmt.Println("http://localhost:" + port + "/Hello/World")
+		fmt.Println("http://localhost:" + port + "/")
 		err := http.ListenAndServe(":"+port, router)
 		if err != nil {
 			log.Fatal(err)
