@@ -215,6 +215,7 @@ func trimImageFile(wg *sync.WaitGroup, q chan string, rect Rectangle, outDir str
 		src, err := readImageFile(inFile)
 		if err != nil {
 			errs = append(errs, err)
+			continue
 		}
 
 		cImg, err := cutter.Crop(src, cutter.Config{
@@ -225,6 +226,7 @@ func trimImageFile(wg *sync.WaitGroup, q chan string, rect Rectangle, outDir str
 		})
 		if err != nil {
 			errs = append(errs, err)
+			continue
 		}
 
 		dist := image.NewRGBA(image.Rectangle{pt1, pt2})
@@ -232,6 +234,7 @@ func trimImageFile(wg *sync.WaitGroup, q chan string, rect Rectangle, outDir str
 
 		if err := writeImageFile(outFile, dist); err != nil {
 			errs = append(errs, err)
+			continue
 		}
 
 		createdFiles = append(createdFiles, outFile)
