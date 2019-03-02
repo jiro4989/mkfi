@@ -3,12 +3,20 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/draw"
+	"image/png"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
+	"sync"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/oliamb/cutter"
 )
 
 const outDir = "out"
@@ -147,6 +155,89 @@ func Trim(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	fmt.Fprintf(w, fmt.Sprintf("%+v\n", param))
 }
 
+type Rectangle struct {
+	X, Y, Width, Height int
+}
+
+func trim(rect Rectangle, outDir string, targetFiles []string) ([]string, error) {
+	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+
+	// 処理対象の数だけキューを生成
+	q := make(chan string, len(targetFiles))
+
+	// 処理結果を格納用
+	var createdFiles []string
+	var errs []error
+
+	// ワーカースレッドの生成
+	for i := 0; i < runtime.NumCPU(); i++ {
+		wg.Add(1)
+		go trimImageFile(&wg, q, rect, outDir, createdFiles, errs)
+	}
+
+	// 処理対象ファイル名を送信
+	// ワーカースレッドの数分しか並列に処理しない
+	for _, f := range targetFiles {
+		q <- f
+	}
+	close(q)
+	wg.Wait()
+
+	if 0 < len(errs) {
+		return nil, errs[0]
+	}
+
+	return createdFiles, nil
+}
+
+func trimImageFile(wg *sync.WaitGroup, q chan string, rect Rectangle, outDir string, createdFiles []string, errs []error) {
+	var (
+		x   = rect.X
+		y   = rect.Y
+		w   = rect.Width
+		h   = rect.Height
+		pt1 = image.Pt(x, y)
+		pt2 = image.Pt(x+w, y+h)
+	)
+	defer wg.Done()
+	for {
+		inFile, ok := <-q // closeされるとokがfalseになる
+		if !ok {
+			return
+		}
+		base := filepath.Base(inFile)
+		outFile := outDir + "/" + base
+
+		src, err := readImageFile(inFile)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		cImg, err := cutter.Crop(src, cutter.Config{
+			Width:  w,
+			Height: h,
+			Anchor: image.Pt(x, y),
+			Mode:   cutter.TopLeft,
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		dist := image.NewRGBA(image.Rectangle{pt1, pt2})
+		draw.Draw(dist, dist.Bounds(), cImg, pt1, draw.Over)
+
+		if err := writeImageFile(outFile, dist); err != nil {
+			errs = append(errs, err)
+		}
+
+		createdFiles = append(createdFiles, outFile)
+	}
+}
+
 func Flip(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer r.Body.Close()
 	// TODO
@@ -155,4 +246,24 @@ func Flip(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 func Paste(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer r.Body.Close()
 	// TODO
+}
+
+func readImageFile(fn string) (img image.Image, err error) {
+	w, err := os.Open(fn)
+	defer w.Close()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	return png.Decode(w)
+}
+
+func writeImageFile(fn string, img image.Image) (err error) {
+	w, err := os.Create(fn)
+	defer w.Close()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	return png.Encode(w, img)
 }

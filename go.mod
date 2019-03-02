@@ -13,8 +13,10 @@ require (
 	github.com/golang/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/google/pprof v0.0.0-20190228041337-2ef8d84b2e3c // indirect
 	github.com/gordonklaus/ineffassign v0.0.0-20180909121442-1003c8bd00dc // indirect
 	github.com/hashicorp/go-version v1.0.0 // indirect
+	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jgautheron/goconst v0.0.0-20170703170152-9740945f5dcb // indirect
 	github.com/julienschmidt/httprouter v1.2.0
@@ -28,6 +30,7 @@ require (
 	github.com/mitchellh/gox v0.4.0 // indirect
 	github.com/mitchellh/iochan v1.0.0 // indirect
 	github.com/motemen/gobump v0.0.0-20170609005736-b5563e1d8b75 // indirect
+	github.com/oliamb/cutter v0.2.2
 	github.com/opennota/check v0.0.0-20180911053232-0c771f5545ff // indirect
 	github.com/pkg/errors v0.8.0 // indirect
 	github.com/securego/gosec v0.0.0-20181211171558-12400f9a1ca7 // indirect
@@ -40,6 +43,8 @@ require (
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e // indirect
 	github.com/tsenart/deadcode v0.0.0-20160724212837-210d2dc333e9 // indirect
 	github.com/walle/lll v0.0.0-20160702150637-8b13b3fbf731 // indirect
+	golang.org/x/arch v0.0.0-20190226203302-36aee92af9e8 // indirect
+	golang.org/x/crypto v0.0.0-20190228161510-8dd112bcdc25 // indirect
 	golang.org/x/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect
 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3 // indirect
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect
