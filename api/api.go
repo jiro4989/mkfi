@@ -1,22 +1,15 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
-	"image"
-	"image/draw"
-	"image/png"
 	"io"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"runtime"
-	"sync"
+	"strconv"
 
+	"github.com/jiro4989/mkfi/domain"
+	"github.com/jiro4989/mkfi/usecase"
 	"github.com/julienschmidt/httprouter"
-	"github.com/oliamb/cutter"
 )
 
 const outDir = "out"
@@ -35,6 +28,16 @@ func RootPage(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
         <fieldset>
             <input type="file" name="upload_files" id="upload_files" multiple="multiple">
             <input type="submit" name="submit" value="アップロード開始">
+        </fieldset>
+    </form>
+    <form method="post" action="/trim" enctype="multipart/form-data">
+        <fieldset>
+            <input type="file" name="upload_files" id="upload_files" multiple="multiple">
+            <input type="text" name="trim-x">
+            <input type="text" name="trim-y">
+            <input type="text" name="trim-width">
+            <input type="text" name="trim-height">
+            <input type="submit" name="submit" value="トリミング開始">
         </fieldset>
     </form>
 </body>
@@ -128,117 +131,50 @@ func Generate(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 func Trim(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer r.Body.Close()
 
-	// リクエストボディを読み取る
-	bodyBytes, err := ioutil.ReadAll(r.Body)
+	files, err := save(w, r, p)
 	if err != nil {
-		// リクエストボディの読み取りに失敗した => 400 Bad Requestエラー
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// JSONパラメーターを構造体にする為の定義
-	type ExampleParameter struct {
-		ID   int    `json:"id"`
-		Name string `json:"name"`
-	}
-	var param ExampleParameter
+	xs := r.FormValue("trim-x")
+	ys := r.FormValue("trim-y")
+	ws := r.FormValue("trim-width")
+	hs := r.FormValue("trim-height")
 
-	// ExampleParameter構造体に変換
-	err = json.Unmarshal(bodyBytes, &param)
+	x, err := strconv.Atoi(xs)
 	if err != nil {
-		// JSONパラメーターを構造体への変換に失敗した => 400 Bad Requestエラー
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// 構造体に変換したExampleParameterを文字列にしてレスポンスに書き込む
-	fmt.Fprintf(w, fmt.Sprintf("%+v\n", param))
-}
-
-type Rectangle struct {
-	X, Y, Width, Height int
-}
-
-func trim(rect Rectangle, outDir string, targetFiles []string) ([]string, error) {
-	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
-		return nil, err
+	y, err := strconv.Atoi(ys)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	var wg sync.WaitGroup
-
-	// 処理対象の数だけキューを生成
-	q := make(chan string, len(targetFiles))
-
-	// 処理結果を格納用
-	var createdFiles []string
-	var errs []error
-
-	// ワーカースレッドの生成
-	for i := 0; i < runtime.NumCPU(); i++ {
-		wg.Add(1)
-		go trimImageFile(&wg, q, rect, outDir, createdFiles, errs)
+	width, err := strconv.Atoi(ws)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	// 処理対象ファイル名を送信
-	// ワーカースレッドの数分しか並列に処理しない
-	for _, f := range targetFiles {
-		q <- f
-	}
-	close(q)
-	wg.Wait()
-
-	if 0 < len(errs) {
-		return nil, errs[0]
+	height, err := strconv.Atoi(hs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	return createdFiles, nil
-}
-
-func trimImageFile(wg *sync.WaitGroup, q chan string, rect Rectangle, outDir string, createdFiles []string, errs []error) {
-	var (
-		x   = rect.X
-		y   = rect.Y
-		w   = rect.Width
-		h   = rect.Height
-		pt1 = image.Pt(x, y)
-		pt2 = image.Pt(x+w, y+h)
-	)
-	defer wg.Done()
-	for {
-		inFile, ok := <-q // closeされるとokがfalseになる
-		if !ok {
-			return
-		}
-		base := filepath.Base(inFile)
-		outFile := outDir + "/" + base
-
-		src, err := readImageFile(inFile)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-
-		cImg, err := cutter.Crop(src, cutter.Config{
-			Width:  w,
-			Height: h,
-			Anchor: image.Pt(x, y),
-			Mode:   cutter.TopLeft,
-		})
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-
-		dist := image.NewRGBA(image.Rectangle{pt1, pt2})
-		draw.Draw(dist, dist.Bounds(), cImg, pt1, draw.Over)
-
-		if err := writeImageFile(outFile, dist); err != nil {
-			errs = append(errs, err)
-			continue
-		}
-
-		createdFiles = append(createdFiles, outFile)
+	rect := domain.Rectangle{X: x, Y: y, Width: width, Height: height}
+	_, err = usecase.TrimImageFiles(rect, "trim", files)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	// もとのページにリダイレクト
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func Flip(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
@@ -249,24 +185,4 @@ func Flip(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 func Paste(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer r.Body.Close()
 	// TODO
-}
-
-func readImageFile(fn string) (img image.Image, err error) {
-	w, err := os.Open(fn)
-	defer w.Close()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	return png.Decode(w)
-}
-
-func writeImageFile(fn string, img image.Image) (err error) {
-	w, err := os.Create(fn)
-	defer w.Close()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	return png.Encode(w, img)
 }
