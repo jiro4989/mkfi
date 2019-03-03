@@ -3,8 +3,6 @@ package usecase
 import (
 	"image"
 	"image/draw"
-	"image/png"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -94,24 +92,4 @@ func trimImageFile(wg *sync.WaitGroup, q chan string, rect domain.Rectangle, out
 
 		createdFiles = append(createdFiles, outFile)
 	}
-}
-
-func readImageFile(fn string) (img image.Image, err error) {
-	w, err := os.Open(fn)
-	defer w.Close()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	return png.Decode(w)
-}
-
-func writeImageFile(fn string, img image.Image) (err error) {
-	w, err := os.Create(fn)
-	defer w.Close()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	return png.Encode(w, img)
 }
