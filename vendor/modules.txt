@@ -1,5 +1,7 @@
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/disintegration/gift v1.2.0
+github.com/disintegration/gift
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
 # github.com/julienschmidt/httprouter v1.2.0
