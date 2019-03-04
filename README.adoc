@@ -68,47 +68,24 @@ mkfi scale -s 90 target.png |
 
 == 機能
 
-=== paste
-
-Request:: 
-
-[source, json]
-{
-  "outFileNameFormat":"actor_%03d.png",
-  "pattern":[
-    ["body1.png", "eye1.png", "mouse1.png"],
-    ["body1.png", "eye1.png", "mouse2.png"],
-    ["body1.png", "eye2.png", "mouse1.png"],
-    ["body1.png", "eye2.png", "mouse2.png"],
-  ]
-}
-
-Response:: FileNames
-
 === trim
 
-RequestParam
+画像を指定の座標から指定の矩形でトリミングし、同名の画像ファイルを指定のディレク
+トリ配下に出力する。
 
-[source, json]
-{
-  "outFileNameFormat":"face_%03d.png",
-  "rectangle":{
-    "x":0.0,
-    "y":0.0,
-    "width":144.0,
-    "height":144.0
-  },
-  "pattern":[
-    "actor001.png",
-    "actor002.png",
-    "actor003.png",
-    "actor004.png",
-    "actor005.png",
-    "actor006.png",
-    "actor007.png",
-    "actor008.png",
-  ]
-}
+=== flip
+
+画像を左右反転し、同名の画像ファイルを指定のディレクトリ配下に出力する。
+
+=== scale
+
+画像を指定のスケール値で拡大、あるいは縮小し、同名の画像ファイルを指定のディレク
+トリ配下に出力する。
+
+=== paste
+
+複数の画像を指定の行、列のタイル上に敷き詰めて画像にまとめて
+指定のディレクトリ配下に出力する。
 
 == 処理ロジック
 
