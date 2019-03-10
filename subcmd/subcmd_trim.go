@@ -1,9 +1,6 @@
 package subcmd
 
 import (
-	"bufio"
-	"os"
-
 	"github.com/jiro4989/mkfi/domain"
 	"github.com/jiro4989/mkfi/log"
 	"github.com/jiro4989/mkfi/usecase"
@@ -16,6 +13,7 @@ func init() {
 	trimCommand.Flags().IntP("axis-y", "y", 0, "Crop Y")
 	trimCommand.Flags().IntP("width", "", 0, "Crop width")
 	trimCommand.Flags().IntP("height", "", 0, "Crop height")
+	trimCommand.Flags().StringP("outdir", "o", "out/trim", "Save dir")
 }
 
 var trimCommand = &cobra.Command{
@@ -43,24 +41,11 @@ var trimCommand = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		log.Debug("parameters:x=", x, ",y=", y, ",width=", w, ",height=", h)
-
-		var targets []string
-		if 1 <= len(args) {
-			log.Debug("target input is arguments.")
-			targets = args
-		} else {
-			log.Debug("target input is stdin.")
-			sc := bufio.NewScanner(os.Stdin)
-			for sc.Scan() {
-				fn := sc.Text()
-				targets = append(targets, fn)
-			}
-			if err := sc.Err(); err != nil {
-				panic(err)
-			}
+		outDir, err := f.GetString("outdir")
+		if err != nil {
+			panic(err)
 		}
-		log.Debug("target inputs are ", targets, ".")
+		log.Debug("commandline options:x=", x, ",y=", y, ",width=", w, ",height=", h, ",outdir=", outDir)
 
 		rect := domain.Rectangle{
 			X:      x,
@@ -68,7 +53,8 @@ var trimCommand = &cobra.Command{
 			Width:  w,
 			Height: h,
 		}
-		usecase.TrimImageFiles(rect, "out/trim", targets)
+		targets := fetchTargetFiles(args)
+		usecase.TrimImageFiles(rect, outDir, targets)
 		log.Debug("end 'trim' subcommand")
 	},
 }
