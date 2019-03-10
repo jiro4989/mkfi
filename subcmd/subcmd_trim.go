@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/jiro4989/mkfi/domain"
+	"github.com/jiro4989/mkfi/log"
 	"github.com/jiro4989/mkfi/usecase"
 	"github.com/spf13/cobra"
 )
@@ -14,13 +15,15 @@ var trimCommand = &cobra.Command{
 	Short: "mkfi",
 	Long:  "mkfi",
 	Run: func(cmd *cobra.Command, args []string) {
+		log.Debug("start 'trim' subcommand.")
 		f := cmd.Flags()
 
-		x, err := f.GetInt("w")
+		log.Debug("get commandline option parameters.")
+		x, err := f.GetInt("axis-x")
 		if err != nil {
 			panic(err)
 		}
-		y, err := f.GetInt("y")
+		y, err := f.GetInt("axis-y")
 		if err != nil {
 			panic(err)
 		}
@@ -32,17 +35,24 @@ var trimCommand = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
+		log.Debug("parameters:x=", x, ",y=", y, ",width=", w, ",height=", h)
 
 		var targets []string
 		if 1 < len(args) {
+			log.Debug("target input is arguments.")
 			targets = args
 		} else {
+			log.Debug("target input is stdin.")
 			sc := bufio.NewScanner(os.Stdin)
 			for sc.Scan() {
 				fn := sc.Text()
 				targets = append(targets, fn)
 			}
+			if err := sc.Err(); err != nil {
+				panic(err)
+			}
 		}
+		log.Debug("target inputs are ", targets, ".")
 
 		rect := domain.Rectangle{
 			X:      x,
@@ -51,13 +61,14 @@ var trimCommand = &cobra.Command{
 			Height: h,
 		}
 		usecase.TrimImageFiles(rect, "out/trim", targets)
+		log.Debug("end 'trim' subcommand")
 	},
 }
 
 func init() {
 	RootCommand.AddCommand(trimCommand)
-	trimCommand.Flags().StringP("", "x", "", "Crop X")
-	trimCommand.Flags().StringP("", "y", "", "Crop Y")
-	trimCommand.Flags().StringP("width", "W", "", "Crop width")
-	trimCommand.Flags().StringP("height", "H", "", "Crop height")
+	trimCommand.Flags().IntP("axis-x", "x", 0, "Crop X")
+	trimCommand.Flags().IntP("axis-y", "y", 0, "Crop Y")
+	trimCommand.Flags().IntP("width", "", 0, "Crop width")
+	trimCommand.Flags().IntP("height", "", 0, "Crop height")
 }
