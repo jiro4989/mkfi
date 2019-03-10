@@ -38,7 +38,7 @@ var trimCommand = &cobra.Command{
 		log.Debug("parameters:x=", x, ",y=", y, ",width=", w, ",height=", h)
 
 		var targets []string
-		if 1 < len(args) {
+		if 1 <= len(args) {
 			log.Debug("target input is arguments.")
 			targets = args
 		} else {
