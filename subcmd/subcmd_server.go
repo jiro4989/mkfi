@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init() {
+	RootCommand.AddCommand(serverCommand)
+	serverCommand.Flags().StringP("owner", "o", "", "owner of remote file")
+}
+
 var serverCommand = &cobra.Command{
 	Use:   "server",
 	Short: "mkfi",
@@ -34,9 +39,4 @@ var serverCommand = &cobra.Command{
 			log.Fatal(err)
 		}
 	},
-}
-
-func init() {
-	RootCommand.AddCommand(serverCommand)
-	serverCommand.Flags().StringP("owner", "o", "", "owner of remote file")
 }

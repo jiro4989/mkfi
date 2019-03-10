@@ -10,6 +10,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init() {
+	RootCommand.AddCommand(trimCommand)
+	trimCommand.Flags().IntP("axis-x", "x", 0, "Crop X")
+	trimCommand.Flags().IntP("axis-y", "y", 0, "Crop Y")
+	trimCommand.Flags().IntP("width", "", 0, "Crop width")
+	trimCommand.Flags().IntP("height", "", 0, "Crop height")
+}
+
 var trimCommand = &cobra.Command{
 	Use:   "trim",
 	Short: "mkfi",
@@ -63,12 +71,4 @@ var trimCommand = &cobra.Command{
 		usecase.TrimImageFiles(rect, "out/trim", targets)
 		log.Debug("end 'trim' subcommand")
 	},
-}
-
-func init() {
-	RootCommand.AddCommand(trimCommand)
-	trimCommand.Flags().IntP("axis-x", "x", 0, "Crop X")
-	trimCommand.Flags().IntP("axis-y", "y", 0, "Crop Y")
-	trimCommand.Flags().IntP("width", "", 0, "Crop width")
-	trimCommand.Flags().IntP("height", "", 0, "Crop height")
 }
