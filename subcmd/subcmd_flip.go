@@ -8,7 +8,7 @@ import (
 
 func init() {
 	RootCommand.AddCommand(flipCommand)
-	flipCommand.Flags().StringP("outdir", "o", "out/trim", "Save dir")
+	flipCommand.Flags().StringP("outdir", "o", "out/flip", "Save dir")
 }
 
 var flipCommand = &cobra.Command{
