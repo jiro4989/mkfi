@@ -11,6 +11,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/client9/misspell v0.3.4 // indirect
 	github.com/disintegration/gift v1.2.0
+	github.com/disintegration/imaging v1.6.0
 	github.com/golang/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
