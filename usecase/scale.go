@@ -1,14 +1,17 @@
 package usecase
 
 import (
-	"github.com/disintegration/imaging"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	"github.com/disintegration/imaging"
 )
 
-func ScaleImageFiles(scaleSize int, outDir string, targetFiles []string) ([]string, error) {
+func logic(in1 interface{}, outDir string, f func(wg *sync.WaitGroup, q chan string, in1 interface{}, outDir string, createdFiles []string, errs []error), targetFiles []string) ([]string, error) {
 	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
 		return nil, err
 	}
@@ -25,7 +28,7 @@ func ScaleImageFiles(scaleSize int, outDir string, targetFiles []string) ([]stri
 	// ワーカースレッドの生成
 	for i := 0; i < runtime.NumCPU(); i++ {
 		wg.Add(1)
-		go scaleImageFile(&wg, q, scaleSize, outDir, createdFiles, errs)
+		go f(&wg, q, in1, outDir, createdFiles, errs)
 	}
 
 	// 処理対象ファイル名を送信
@@ -43,8 +46,19 @@ func ScaleImageFiles(scaleSize int, outDir string, targetFiles []string) ([]stri
 	return createdFiles, nil
 }
 
-func scaleImageFile(wg *sync.WaitGroup, q chan string, scaleSize int, outDir string, createdFiles []string, errs []error) {
+func ScaleImageFiles(scaleSize int, outDir string, targetFiles []string) ([]string, error) {
+	return logic(scaleSize, outDir, scaleImageFile, targetFiles)
+}
+
+func scaleImageFile(wg *sync.WaitGroup, q chan string, in1 interface{}, outDir string, createdFiles []string, errs []error) {
 	defer wg.Done()
+
+	scaleSize, ok := in1.(int)
+	if !ok {
+		err := errors.New(fmt.Sprintf("illegal input data. input=%v", in1))
+		errs = append(errs, err)
+		return
+	}
 	for {
 		inFile, ok := <-q // closeされるとokがfalseになる
 		if !ok {

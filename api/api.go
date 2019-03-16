@@ -182,6 +182,11 @@ func Flip(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	// TODO
 }
 
+func Scale(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	defer r.Body.Close()
+	// TODO
+}
+
 func Paste(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	defer r.Body.Close()
 	// TODO
