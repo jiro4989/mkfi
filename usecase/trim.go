@@ -1,11 +1,11 @@
 package usecase
 
 import (
+	"errors"
+	"fmt"
 	"image"
 	"image/draw"
-	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 
 	"github.com/jiro4989/mkfi/domain"
@@ -13,41 +13,18 @@ import (
 )
 
 func TrimImageFiles(rect domain.Rectangle, outDir string, targetFiles []string) ([]string, error) {
-	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
-		return nil, err
-	}
-
-	var wg sync.WaitGroup
-
-	// 処理対象の数だけキューを生成
-	q := make(chan string, len(targetFiles))
-
-	// 処理結果を格納用
-	var createdFiles []string
-	var errs []error
-
-	// ワーカースレッドの生成
-	for i := 0; i < runtime.NumCPU(); i++ {
-		wg.Add(1)
-		go trimImageFile(&wg, q, rect, outDir, createdFiles, errs)
-	}
-
-	// 処理対象ファイル名を送信
-	// ワーカースレッドの数分しか並列に処理しない
-	for _, f := range targetFiles {
-		q <- f
-	}
-	close(q)
-	wg.Wait()
-
-	if 0 < len(errs) {
-		return nil, errs[0]
-	}
-
-	return createdFiles, nil
+	return logic(rect, outDir, trimImageFile, targetFiles)
 }
 
-func trimImageFile(wg *sync.WaitGroup, q chan string, rect domain.Rectangle, outDir string, createdFiles []string, errs []error) {
+func trimImageFile(wg *sync.WaitGroup, q chan string, in1 interface{}, outDir string, createdFiles []string, errs []error) {
+	defer wg.Done()
+
+	rect, ok := in1.(domain.Rectangle)
+	if !ok {
+		err := errors.New(fmt.Sprintf("illegal input data. input=%v", in1))
+		errs = append(errs, err)
+		return
+	}
 	var (
 		x   = rect.X
 		y   = rect.Y
@@ -56,7 +33,6 @@ func trimImageFile(wg *sync.WaitGroup, q chan string, rect domain.Rectangle, out
 		pt1 = image.Pt(x, y)
 		pt2 = image.Pt(x+w, y+h)
 	)
-	defer wg.Done()
 	for {
 		inFile, ok := <-q // closeされるとokがfalseになる
 		if !ok {
