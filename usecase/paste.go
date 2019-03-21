@@ -1,15 +1,14 @@
 package usecase
 
 import (
-	"bufio"
 	"fmt"
 	"image"
 	"image/draw"
-	"log"
 	"math"
 	"os"
 
 	"github.com/jiro4989/mkfi/domain"
+	"github.com/jiro4989/mkfi/log"
 )
 
 func PasteImageFiles(param domain.PasteParam, outDir string, targetFiles []string) ([]string, error) {
@@ -24,22 +23,23 @@ func PasteImageFiles(param domain.PasteParam, outDir string, targetFiles []strin
 		fnFmt     = fmt.Sprintf("%s/%s%s.png", outDir, outPre, padFmt)
 		outWidth  = width * col
 		outHeight = height * row
-		cnt       = 0
-		fcnt      = 1
+		fcnt      = 1 // タイル状に貼り付けられたことで生成された画像ファイルの枚数
 	)
 	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	dist := image.NewRGBA(image.Rect(0, 0, outWidth, outHeight))
 
-	sc := bufio.NewScanner(os.Stdin)
-	for sc.Scan() {
-		inFile := sc.Text()
+	// 処理結果を格納用
+	var createdFiles []string
+	var errs []error
 
+	for cnt, inFile := range targetFiles {
 		src, err := readImageFile(inFile)
 		if err != nil {
-			log.Fatal(err)
+			errs = append(errs, err)
+			log.Error(fmt.Sprintf("Failed reading image file. file=%s, err=%v", inFile, err))
 		}
 
 		pt := calcPos(cnt, row, col, width, height, max)
@@ -52,35 +52,38 @@ func PasteImageFiles(param domain.PasteParam, outDir string, targetFiles []strin
 		draw.Draw(dist, rect, src, image.Pt(0, 0), draw.Over)
 
 		// 画像の保存
+		// 生成するタイル画像内に貼り付けた画像の数が上限に達していた場合は
+		// 画像ファイルを出力し、画像バッファを新規作成する。
 		if (cnt+1)%max == 0 {
 			on := fmt.Sprintf(fnFmt, fcnt)
 			if err := writeImageFile(on, dist); err != nil {
-				log.Fatal(err)
+				errs = append(errs, err)
+				log.Error(fmt.Sprintf("Failed reading image file. file=%s, err=%v", on, err))
 			}
 
 			dist = image.NewRGBA(image.Rect(0, 0, outWidth, outHeight))
 			fcnt++
 
 			fmt.Println(on)
+			createdFiles = append(createdFiles, on)
 		}
-
-		cnt++
-	}
-
-	if err := sc.Err(); err != nil {
-		log.Fatal(err)
 	}
 
 	// 空のファイルが生成されないようにチェック
-	if 0 < cnt%row*col {
+	if 0 < len(targetFiles)-1%max {
 		on := fmt.Sprintf(fnFmt, fcnt)
 		if err := writeImageFile(on, dist); err != nil {
-			log.Fatal(err)
+			errs = append(errs, err)
+			log.Error(fmt.Sprintf("Failed reading image file. file=%s, err=%v", on, err))
 		}
-		fmt.Println(on)
+		createdFiles = append(createdFiles, on)
 	}
 
-	return []string{}, nil // TODO
+	if 0 < len(errs) {
+		return nil, errs[0]
+	}
+
+	return createdFiles, nil
 }
 
 // calcPos は画像の貼り付け座標を計算して返す。
